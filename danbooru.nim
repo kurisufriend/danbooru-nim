@@ -46,17 +46,6 @@ type
     image_height*: int
     created_at*: string
     updated_at*: string
-    
-
-proc newDanbooru*(): danbooru =
-  result.endpoint = "https://danbooru.donmai.us"
-  result.c = newHttpClient()
-
-proc post*(d: danbooru, id: int): dbPost =
-  to(d.c.getContent(d.endpoint&fmt"/posts/{id}.json").parseJson(), dbPost)
-
-proc searchPosts*(d: danbooru, tags: string, random: bool = false): seq[dbPost] =
-  to(d.c.getContent(d.endpoint&fmt"/posts.json?tags="&tags&"&random=" & $random).parseJson(), seq[dbPost])
 
 
 proc filterTags*(p: var seq[dbPost], tags: string): seq[dbPost] =
@@ -67,3 +56,28 @@ proc filterTags*(p: var seq[dbPost], tags: string): seq[dbPost] =
         return false
     return true
   ))
+    
+
+proc newDanbooru*(): danbooru =
+  result.endpoint = "https://danbooru.donmai.us"
+  result.c = newHttpClient()
+
+proc post*(d: danbooru, id: int): dbPost =
+  to(d.c.getContent(d.endpoint&fmt"/posts/{id}.json").parseJson(), dbPost)
+
+proc searchPosts*(d: danbooru, tags: string, random: bool = false, page: string = "1"): seq[dbPost] =
+  to(d.c.getContent(d.endpoint&fmt"/posts.json?tags="&tags&"&random=" & $random & "&page=" & $page).parseJson(), seq[dbPost])
+
+
+proc returnTaggedPosts*(d: danbooru, tags: string, filterTags: string, num: int = 10): seq[dbPost] =
+  var page: int = 1
+  while result.len < num:
+    var tmp: seq[dbPost]
+    try:
+      tmp = d.searchPosts(tags, random = false, page = $page)
+    except:
+      discard
+    tmp = tmp.filterTags(filterTags)
+    result &= tmp
+    page += 1
+  result = result[0 ..< num]
